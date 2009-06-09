@@ -25,12 +25,12 @@ http://sweettweetscfc.riaforge.org/
 		clientManagement="false"
 		sessionManagement="false">
 
-If you're running ColdFusion 8, you will see a sweet ajax implementation here:
+If you're running ColdFusion 8 or later, you will see a sweet ajax implementation here:
 
 <!--- make sure you're *really* running CF8 --->
 <cfif structKeyExists(server, "coldfusion")
 		and structKeyExists(server.coldfusion, "productversion")
-		and left(server.coldfusion.productversion, 1) eq "8">
+		and left(server.coldfusion.productversion, 1) gte "8">
 
 	<!--- The un-shortened url of the page you're looking for tweetbacks to --->
 	<cfset variables.uri = 'http://fusiongrokker.com/post/sweettweets-a-plugin-for-anything-including-mango'/>
