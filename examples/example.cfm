@@ -20,10 +20,6 @@ VERSION INFORMATION:
 This file is part of SweetTweetsCFC.
 http://sweettweetscfc.riaforge.org/
 --->
-<cfapplication name="SweetTweetsCFC-SimpleExample-1"
-		applicationTimeout="#CreateTimeSpan(0,0,30,0)#"
-		clientManagement="false"
-		sessionManagement="false">
 
 <!--- the un-shortened url to get tweetbacks for --->
 <cfset variables.uri = 'http://localhost/SweetTweetsCFC/example.cfm'/>
