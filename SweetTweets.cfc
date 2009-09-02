@@ -246,10 +246,14 @@ http://sweettweetscfc.riaforge.org/
 	<cffunction name="makeTwitterSearchRequest" access="private" output="false" returnType="any">
 		<cfargument name="req" type="String" required="true"/>
 		<cfset var result = ""/>
-		<cfhttp url="#arguments.req#" method="get" result="result" useragent="SweetTweetsCFC | http://fusiongrokker.com"></cfhttp>
+		<cfhttp url="#arguments.req#" timeout="10" method="get" result="result" useragent="SweetTweetsCFC | http://fusiongrokker.com"></cfhttp>
 		<!--- <cflog application="false" file="SweetTweets" text="Twitter Search Result: #result.fileContent#"/> --->
 		<cftry>
-			<cfset result = jsonService.deserialize(result.fileContent.toString())/>
+			<cfif result.statuscode contains "408">
+				<cfthrow message="request timed out" detail="acting as if results were empty" errorcode="408" />
+			<cfelse>
+				<cfset result = jsonService.deserialize(result.fileContent.toString())/>
+			</cfif>
 			<cfcatch type="any"><!--- catch errors thrown by jsonService (likely problem w/twitter search - down,etc), return empty set --->
 				<cfset result = StructNew()/>
 				<cfset result.results = arrayNew(1)/> 
