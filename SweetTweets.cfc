@@ -71,7 +71,11 @@ http://sweettweetscfc.riaforge.org/
 				local.thisSearch = getTweetSearchUrl(arguments.uri);
 				local.shortened = getShortUrls(arguments.uri);
 
-				local.tweets = makeTwitterSearchRequest(local.thisSearch).results;
+				try{
+					local.tweets = makeTwitterSearchRequest(local.thisSearch).results;
+				} catch(any e) {
+					local.tweets = arrayNew(1);
+				}
 				local.tweets = killImpostors(local.tweets,local.shortened);
 				local.tweets = cleanup(local.tweets);
 
