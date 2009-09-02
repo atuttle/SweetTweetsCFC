@@ -88,6 +88,7 @@ http://sweettweetscfc.riaforge.org/
 		<cfscript>
 			var local = structNew();
 			var cacheKey = getCacheKey(arguments.uri);
+			cacheKablooey();
 			setupCache(cacheKey);
 
 			//use services
@@ -139,23 +140,14 @@ http://sweettweetscfc.riaforge.org/
 			var local = StructNew();
 			local.shortened = structNew();
 			local.params = StructNew();
-			
-			//cli.gs
-			local.params['appid'] = 'http://sweettweetscfc.riaforge.org';
-			local.params['url'] = arguments.uri;
-			try {
-				local.shortened.cligs = urlService.shrink('cligs',local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
+
 			//is.gd
 			structClear(local.params);
 			local.params['longurl'] = arguments.uri;
 			try {
 				local.shortened.isgd = urlService.shrink('isgd',local.params);
 			}catch (any e){
-				local.shortened.cligs = '';
+				local.shortened.isgd = '';
 			}
 			
 			//tinyurl.com
@@ -164,45 +156,9 @@ http://sweettweetscfc.riaforge.org/
 			try {
 				local.shortened.tinyurl = urlService.shrink('tinyurl', local.params);
 			}catch (any e){
-				local.shortened.cligs = '';
+				local.shortened.tinyurl = '';
 			}
-			
-			//hex.io
-			structClear(local.params);
-			local.params['url'] = arguments.uri;
-			try {
-				local.shortened.hexio = urlService.shrink('hexio', local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
-			//urlzen.com
-			structClear(local.params);
-			local.params['url'] = arguments.uri;
-			try {
-				local.shortened.urlzen = urlService.shrink('urlzen', local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
-			//budurl.com
-			structClear(local.params);
-			local.params['myurl'] = arguments.uri;
-			try {
-				local.shortened.budurl = urlService.shrink('budurl', local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
-			//MooURL.com
-			structClear(local.params);
-			local.params['source'] = arguments.uri;
-			try {
-				local.shortened.moourl = urlService.shrink('MooURL', local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
+
 			//remove blank items
 			for (local.service in local.shortened){
 				if (len(trim(local.shortened[local.service])) eq 0 or find(" ",trim(local.shortened[local.service]))){
@@ -302,6 +258,15 @@ http://sweettweetscfc.riaforge.org/
 	</cffunction>
 
 	<!--- caching functions --->
+	<cffunction name="cacheKablooey" access="public" output="false" returntype="void" hint="Blows away the entire cache. Kablooey!">
+		<cfscript>
+			if (variables.cacheLocation eq "application"){
+				structDelete(application, "sweetTweetCache");
+			}else{
+				structDelete(variables, "sweetTweetCache");
+			}
+		</cfscript>
+	</cffunction>
 	<cffunction name="setupCache" access="private" output="false" returnType="void">
 		<cfargument name="cacheKey" type="string" required="true" />
 		<cfscript>
