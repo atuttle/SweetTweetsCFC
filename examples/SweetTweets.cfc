@@ -27,11 +27,15 @@ http://sweettweetscfc.riaforge.org/
 --->
 <cfcomponent output="false">
 	
+	<cfproperty name="cacheLocation" type="string"
+	hint="Defines whether the cache should be kept in the application scope, or internally to this component. Default is internal. If using internal, you should persist this object in the application or server scopes." />
+	
 	<cfset variables.urlService = ""/>
 	<cfset variables.jsonService = ""/>
 	<cfset variables.cacheLocation = "application"/>
 	
-	<cffunction name="init" output="false">
+	<cffunction name="init" output="false"
+	hint="Constructor - specify whether the cache should be stored locally inside this component, or in the application scope.">
 		<cfargument name="useLocalCache" type="boolean" default="true"/>
 		<!--- save cache location --->
 		<cfif arguments.useLocalCache>
@@ -46,8 +50,9 @@ http://sweettweetscfc.riaforge.org/
 		<cfreturn this/>
 	</cffunction>
 	
-	<!--- public functions --->
-	<cffunction name="getTweetbacks" access="public" output="false" returntype="array">
+	<!--- main functions --->
+	<cffunction name="getTweetbacks" access="public" output="false" returntype="array"
+	hint="Returns high-fidelity data for the requested tweetbacks. You will receive an array of structures, each structure representing 1 tweet that contains a shortened version of the supplied URI. If there are no matches, the array will be empty. Structure keys are: <ul><li><strong>created_at</strong> - timestamp of tweet</li><li><strong>from_user</strong> - twitter username that posted the tweet</li><li><strong>from_user_id</strong> - twitter unique userId of tweet poster</li><li><strong>id</strong> - tweet unique id</li><li><strong>iso_language_code</strong> - language indicator</li><li><strong>profile_image_url</strong> - url to avatar of tweet poster</li><li><strong>source</strong> - twitter client or other source of tweet</li><li><strong>text</strong> - raw text of tweet</li><li><strong>to_user_id</strong> - userId of person being replied to, 'null' (string) if not applicable</ul>">
 		<cfargument name="uri" type="string" required="true"/>
 		<cfscript>
 			var local = structNew();
@@ -57,11 +62,8 @@ http://sweettweetscfc.riaforge.org/
 			if (isSimpleValue(variables.urlService)){variables.urlService = createObject("component", "shrinkURL").init();}
 			if (isSimpleValue(variables.jsonService)){variables.jsonService = createObject("component", "JSONUtil").init();}
 
-			//strip any bookmarks from the url
-			arguments.uri = listFirst(arguments.uri,'##');
-			
 			//setup cache
-			cacheKey = hash(arguments.uri);
+			cacheKey = getCacheKey(arguments.uri);
 			setupCache(cacheKey);
 			
 			//check tweetback cache, updates every 5 minutes at most
@@ -71,7 +73,11 @@ http://sweettweetscfc.riaforge.org/
 				local.thisSearch = getTweetSearchUrl(arguments.uri);
 				local.shortened = getShortUrls(arguments.uri);
 
-				local.tweets = makeTwitterSearchRequest(local.thisSearch).results;
+				try{
+					local.tweets = makeTwitterSearchRequest(local.thisSearch).results;
+				} catch(any e) {
+					local.tweets = arrayNew(1);
+				}
 				local.tweets = killImpostors(local.tweets,local.shortened);
 				local.tweets = cleanup(local.tweets);
 
@@ -82,17 +88,13 @@ http://sweettweetscfc.riaforge.org/
 			return local.tweets;
 		</cfscript>
 	</cffunction>
-	<cffunction name="debug" access="public" output="true" returntype="any">
+	<cffunction name="debug" access="public" output="true" returntype="any"
+	hint="For my debugging purposes. You can ignore this function.">
 		<cfargument name="uri" type="string" required="true"/>
 		<cfscript>
 			var local = structNew();
-			var cacheKey = '';
-
-			//strip any bookmarks from the url
-			arguments.uri = listFirst(arguments.uri,'##');
-			
-			//setup cache
-			cacheKey = hash(arguments.uri);
+			var cacheKey = getCacheKey(arguments.uri);
+			cacheKablooey();
 			setupCache(cacheKey);
 
 			//use services
@@ -105,7 +107,8 @@ http://sweettweetscfc.riaforge.org/
 			dump(local,true);
 		</cfscript>
 	</cffunction>
-	<cffunction name="getTweetbacksHTML" access="remote" output="false" returntype="string">
+	<cffunction name="getTweetbacksHTML" access="remote" output="false" returntype="string"
+	hint="Returns the same data as getTweetbacks, only pre-formatted as HTML. See examples for what the HTML will look like, and you can apply your own CSS.">
 		<cfargument name="uri" type="string" required="true"/>
 		<cfargument name="limit" type="numeric" required="false" default="100" hint="Number of tweets to display, recent gets priority. 0 = unlimited"/>
 		<cfscript>
@@ -137,30 +140,22 @@ http://sweettweetscfc.riaforge.org/
 		<cfreturn local.tweetbackHTML/>
 	</cffunction>
 	
-	<!--- data functions --->
-	<cffunction name="getShortUrls" access="public" output="false" returnType="struct">
+	<!--- data/lookup functions --->
+	<cffunction name="getShortUrls" access="public" output="false" returnType="struct"
+	hint="Looks up the short urls for the given URI. Does not check cache. (See: <strong>urlCacheExists</strong>, <strong>getURLCache</strong>)">
 		<cfargument name="uri" type="string" required="true"/>
 		<cfscript>
 			var local = StructNew();
 			local.shortened = structNew();
 			local.params = StructNew();
-			
-			//cli.gs
-			local.params['appid'] = 'http://sweettweetscfc.riaforge.org';
-			local.params['url'] = arguments.uri;
-			try {
-				local.shortened.cligs = urlService.shrink('cligs',local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
+
 			//is.gd
 			structClear(local.params);
 			local.params['longurl'] = arguments.uri;
 			try {
 				local.shortened.isgd = urlService.shrink('isgd',local.params);
 			}catch (any e){
-				local.shortened.cligs = '';
+				local.shortened.isgd = '';
 			}
 			
 			//tinyurl.com
@@ -169,45 +164,9 @@ http://sweettweetscfc.riaforge.org/
 			try {
 				local.shortened.tinyurl = urlService.shrink('tinyurl', local.params);
 			}catch (any e){
-				local.shortened.cligs = '';
+				local.shortened.tinyurl = '';
 			}
-			
-			//hex.io
-			structClear(local.params);
-			local.params['url'] = arguments.uri;
-			try {
-				local.shortened.hexio = urlService.shrink('hexio', local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
-			//urlzen.com
-			structClear(local.params);
-			local.params['url'] = arguments.uri;
-			try {
-				local.shortened.urlzen = urlService.shrink('urlzen', local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
-			//budurl.com
-			structClear(local.params);
-			local.params['myurl'] = arguments.uri;
-			try {
-				local.shortened.budurl = urlService.shrink('budurl', local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
-			//MooURL.com
-			structClear(local.params);
-			local.params['source'] = arguments.uri;
-			try {
-				local.shortened.moourl = urlService.shrink('MooURL', local.params);
-			}catch (any e){
-				local.shortened.cligs = '';
-			}
-			
+
 			//remove blank items
 			for (local.service in local.shortened){
 				if (len(trim(local.shortened[local.service])) eq 0 or find(" ",trim(local.shortened[local.service]))){
@@ -222,7 +181,7 @@ http://sweettweetscfc.riaforge.org/
 		<cfargument name="uri" type="string" required="true"/>
 		<cfscript>
 			var local = structNew();
-			var cacheKey = hash(arguments.uri);
+			var cacheKey = getCacheKey(arguments.uri);
 			//shortened url cache never expires
 			if (urlCacheExists(cacheKey)){
 				local.shortened = getUrlCache(cacheKey);
@@ -246,10 +205,14 @@ http://sweettweetscfc.riaforge.org/
 	<cffunction name="makeTwitterSearchRequest" access="private" output="false" returnType="any">
 		<cfargument name="req" type="String" required="true"/>
 		<cfset var result = ""/>
-		<cfhttp url="#arguments.req#" method="get" result="result" useragent="SweetTweetsCFC | http://fusiongrokker.com"></cfhttp>
+		<cfhttp url="#arguments.req#" timeout="10" method="get" result="result" useragent="SweetTweetsCFC | http://fusiongrokker.com"></cfhttp>
 		<!--- <cflog application="false" file="SweetTweets" text="Twitter Search Result: #result.fileContent#"/> --->
 		<cftry>
-			<cfset result = jsonService.deserialize(result.fileContent.toString())/>
+			<cfif result.statuscode contains "408">
+				<cfthrow message="request timed out" detail="acting as if results were empty" errorcode="408" />
+			<cfelse>
+				<cfset result = jsonService.deserializeCustom(result.fileContent.toString())/>
+			</cfif>
 			<cfcatch type="any"><!--- catch errors thrown by jsonService (likely problem w/twitter search - down,etc), return empty set --->
 				<cfset result = StructNew()/>
 				<cfset result.results = arrayNew(1)/> 
@@ -303,6 +266,16 @@ http://sweettweetscfc.riaforge.org/
 	</cffunction>
 
 	<!--- caching functions --->
+	<cffunction name="cacheKablooey" access="public" output="false" returntype="void"
+	hint="Blows away the entire cache. Kablooey!">
+		<cfscript>
+			if (variables.cacheLocation eq "application"){
+				structDelete(application, "sweetTweetCache");
+			}else{
+				structDelete(variables, "sweetTweetCache");
+			}
+		</cfscript>
+	</cffunction>
 	<cffunction name="setupCache" access="private" output="false" returnType="void">
 		<cfargument name="cacheKey" type="string" required="true" />
 		<cfscript>
@@ -329,6 +302,27 @@ http://sweettweetscfc.riaforge.org/
 				return (not structKeyExists(variables.sweetTweetCache.tweetbacks[arguments.cacheKey], "timeout") or
 						dateCompare(now(), variables.sweetTweetCache.tweetbacks[arguments.cacheKey].timeout) eq 1);
 			}
+		</cfscript>
+	</cffunction>
+	<cffunction name="clearTweetCacheByURI" access="public" output="false" returntype="void"
+	hint="Clears the tweetback cache for the supplied URI">
+		<cfargument name="uri" type="string" required="true" />
+		<cfscript>
+			var cacheKey = getCacheKey(arguments.uriuri);
+			if (variables.cacheLocation eq "application"){
+				structDelete(application.sweetTweetCache.tweetbacks, cacheKey);
+			}else{
+				structDelete(variables.sweetTweetCache.tweetbacks, cacheKey);
+			}
+		</cfscript>
+	</cffunction>
+	<cffunction name="getCacheKey" access="public" output="false" returntype="String"
+	hint="Converts a URL into a <strong>cacheKey</strong> (string) - a safe string representation (hash) of the uri, used by some caching functions.">
+		<cfargument name="uri" type="string" required="true" />
+		<cfscript>
+			//strip any bookmarks from the url before hashing
+			arguments.uri = listFirst(arguments.uri,'##');
+			return hash(arguments.uri);			
 		</cfscript>
 	</cffunction>
 	<cffunction name="getTweetCache" access="private" output="false" returnType="array">
@@ -366,9 +360,14 @@ http://sweettweetscfc.riaforge.org/
 			}
 		</cfscript>
 	</cffunction>
-	<cffunction name="getUrlCache" access="private" output="false" returnType="struct">
+	<cffunction name="getUrlCache" access="public" output="false" returnType="struct" 
+	hint="Returns the cached copy of short URLs for the given cacheKey. If no short URL cache exists for given cacheKey, and URI argument is supplied (and not blank), the short URLs will be looked up and then returned.">
 		<cfargument name="cacheKey" type="string" required="true"/>
+		<cfargument name="uri" type="string" required="false" default=""/>
 		<cfscript>
+			if (not urlCacheExists(arguments.cacheKey) and len(arguments.uri)){
+				setUrlCache(arguments.cacheKey, getShortUrls(arguments.uri));
+			}
 			if (variables.cacheLocation eq "application"){
 				return application.sweetTweetCache.urls[arguments.cacheKey];
 			}else{
