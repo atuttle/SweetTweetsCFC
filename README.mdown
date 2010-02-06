@@ -2,7 +2,7 @@
 
 SweetTweetsCFC is a ColdFusion Component (CFC) that allows you to search for [trackbacks](http://en.wikipedia.org/wiki/Trackback) to your content on Twitter.
 
-Thanks to the search engine [Topsy](http://topsy.com/), Twitter trackbacks are finally possible in a reasonable format that will find all links regardless of the arcane or obscure URL shortening service used.
+Thanks to the search engine [Topsy](http://topsy.com/) and its API, Twitter trackbacks are finally possible in a reasonable format that will find all links regardless of the arcane or obscure URL shortening service used.
 
 ## Usage
 
