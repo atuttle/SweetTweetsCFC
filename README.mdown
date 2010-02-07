@@ -12,9 +12,9 @@ Thanks to the search engine [Topsy](http://topsy.com/) and its API, Twitter trac
 
 	**Note:** When storing the cache internally, it is your responsibility to persist the component instance. If you choose to store the cache inside the component, but reload the component on every request, you are not caching anything.
 	
-	variables.sweetTweets = createObject('component','path.to.SweetTweets').init(false); //#1 above
+	<tt>variables.sweetTweets = createObject('component','path.to.SweetTweets').init(false); //#1 above
 	// -or-
-	variables.sweetTweets = createObject('component','path.to.SweetTweets').init(true); //#2 above
+	variables.sweetTweets = createObject('component','path.to.SweetTweets').init(true); //#2 above</tt>
 
 2. Configure the request parameters:
 
