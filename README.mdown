@@ -56,13 +56,13 @@ If you're requesting the pre-formatted HTML, you'll notice it's not the pretties
 
 You'll notice a few CSS selectors that you can make use of:
 
-* #tweetbacks
-* #tweetbacks h3
-* #tweetbacks ul
-* #tweetbacks ul li
-* #tweetbacks ul li img
-* #tweetbacks ul li a
-* #tweetbacks ul li span
-* #tweetbacks ul li span.tweetback_tweet
-* #tweetbacks ul li span.tweetback_timestamp
+* \#tweetbacks
+* \#tweetbacks h3
+* \#tweetbacks ul
+* \#tweetbacks ul li
+* \#tweetbacks ul li img
+* \#tweetbacks ul li a
+* \#tweetbacks ul li span
+* \#tweetbacks ul li span.tweetback_tweet
+* \#tweetbacks ul li span.tweetback_timestamp
 
