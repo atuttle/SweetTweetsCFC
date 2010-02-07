@@ -36,3 +36,33 @@ SweetTweets will let you request an array of TweetBack data:
 Or you can request the pre-formatted HTML, made from the same data:
 
 	variables.tweetbacks = variables.sweetTweets.getTweetBacksHTML(variables.uri, variables.limit);
+
+### Style the result
+
+If you're requesting the pre-formatted HTML, you'll notice it's not the prettiest around. That's because no CSS is applied. Here is some example data returned, and an example of some CSS to make it a little more pretty:
+
+	<div id="tweetbacks">
+		<h3>50 Tweetbacks</h3>
+		<ul>
+			<li style="clear:left;">
+				<img src="http://avatar.url.jpg" align="left" vspace="2" hspace="4"/>
+				<a href="http://twitter.com/benstiller" style="background:none;"><strong>Ben Stiller</strong></a>
+				<span class="tweetback_tweet">RT <a href='http://twitter.com/leolaporte'>@leolaporte</a>: lulz <a href='http://www.lmgtfy.com'>http://www.lmgtfy.com</a> might possibly be my favorite website ever.</span>
+				<span class="tweetback_timestamp"><a href="http://twitter.com/benstiller/status/1111111111">1 day ago</a></span>
+			</li>
+			<!-- ... -->
+		</ul>
+	</div>
+
+You'll notice a few CSS selectors that you can make use of:
+
+* #tweetbacks
+* #tweetbacks h3
+* #tweetbacks ul
+* #tweetbacks ul li
+* #tweetbacks ul li img
+* #tweetbacks ul li a
+* #tweetbacks ul li span
+* #tweetbacks ul li span.tweetback_tweet
+* #tweetbacks ul li span.tweetback_timestamp
+
