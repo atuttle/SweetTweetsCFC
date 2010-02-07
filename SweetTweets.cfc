@@ -55,8 +55,7 @@ http://sweettweetscfc.riaforge.org/
 			var local = structNew();
 			var cacheKey = '';
 
-			//first some business -- if being called remotely (ajax), jsonService and urlService will be blank! :(
-			if (isSimpleValue(variables.urlService)){variables.urlService = createObject("component", "shrinkURL").init();}
+			//first some business -- if being called remotely (ajax), jsonService will be blank! :(
 			if (isSimpleValue(variables.jsonService)){variables.jsonService = createObject("component", "JSONUtil").init();}
 
 			//setup cache
@@ -68,33 +67,30 @@ http://sweettweetscfc.riaforge.org/
 				local.tweets = getTweetCache(cacheKey);
 			}else{
 				local.thisSearch = getTweetSearchUrl(arguments.uri);
-				local.shortened = getShortUrls(arguments.uri);
 
 				try{
-					local.tweets = makeTwitterSearchRequest(local.thisSearch).results;
+					local.searchResult = makeTwitterSearchRequest(local.thisSearch);
+					local.tweets = local.searchResult.results;
 				} catch(any e) {
 					local.tweets = arrayNew(1);
 				}
-				local.tweets = killImpostors(local.tweets,local.shortened);
-				local.tweets = cleanup(local.tweets);
+				local.tweets = markup(local.tweets);
 
 				//cache tweets for 5 minutes
 				setTweetCache(cacheKey, local.tweets, 5);
 			}
-
 			return local.tweets;
 		</cfscript>
 	</cffunction>
 	<cffunction name="getTweetbacksHTML" access="remote" output="false" returntype="string"
 	hint="Returns the same data as getTweetbacks, only pre-formatted as HTML. See examples for what the HTML will look like, and you can apply your own CSS.">
 		<cfargument name="uri" type="string" required="true"/>
-		<cfargument name="limit" type="numeric" required="false" default="100" hint="Number of tweets to display, recent gets priority. 0 = unlimited"/>
+		<cfargument name="limit" type="numeric" required="false" default="50" hint="Number of tweets to display, recent gets priority. Max 50."/>
 		<cfscript>
 			var local = structNew();
 			local.dsp = structNew();
 
 			local.tweets = getTweetbacks(arguments.uri);
-			local.searchUrl = replace(getTweetSearchUrl(arguments.uri), ".json", "");//instead of linking to json, link to search results page
 			local.tweetCount = arrayLen(local.tweets);
 			local.limit = min(arguments.limit, local.tweetcount);
 			if (local.limit eq 0){local.limit=local.tweetcount;}
@@ -103,66 +99,40 @@ http://sweettweetscfc.riaforge.org/
 			if (local.tweetcount eq 0){
 				local.dsp.header = "<h3>No Tweetbacks</h3>";
 			}else{
-				local.dsp.header = "<h3>#arrayLen(local.tweets)# Tweetbacks</h3>";
+				local.dsp.header = "<h3>#local.tweetCount# Tweetbacks</h3>";
 				if (local.tweetcount eq 1){local.dsp.header=replace(local.dsp.header,"Tweetbacks","Tweetback");}
-			}
-			//define view-all link
-			if (local.tweetcount lte local.limit or local.limit eq 0){
-				local.dsp.allLink = "";
-			}else{
-				local.dsp.allLink = "Showing #local.limit# most recent - <a id='viewAllTweetbacks' href='#local.searchUrl#'>View All Tweetbacks</a>";
 			}
 		</cfscript>
 		<!---streamlined html to be as small as possible since it very well might be returned via ajax--->
-		<cfsavecontent variable="local.tweetbackHTML"><cfoutput><div id="tweetbacks">#local.dsp.header##local.dsp.allLink#<ul><cfloop from="1" to="#local.limit#" index="local.t"><li style="clear:left;"><img src="#local.tweets[local.t].profile_image_url#" align="left" vspace="2" hspace="4"/> <a href="http://twitter.com/#local.tweets[local.t].from_user#" style="background:none;"><strong>#local.tweets[local.t].from_user#</strong></a> <span class="tweetback_tweet">#local.tweets[local.t].text#</span> <span class="tweetback_timestamp"><a href="http://twitter.com/#local.tweets[local.t].from_user#/statuses/#local.tweets[local.t].id#">#local.tweets[local.t].created_at#</a></span></li></cfloop></ul></div></cfoutput></cfsavecontent>
+		<cfsavecontent variable="local.tweetbackHTML"><cfoutput><div id="tweetbacks">#local.dsp.header#<ul><cfloop from="1" to="#local.limit#" index="local.t"><li style="clear:left;"><img src="#local.tweets[local.t].author.photo_url#" align="left" vspace="2" hspace="4"/> <a href="#local.tweets[local.t].author.url#" style="background:none;"><strong>#local.tweets[local.t].author.name#</strong></a> <span class="tweetback_tweet">#local.tweets[local.t].content#</span> <span class="tweetback_timestamp"><a href="#local.tweets[local.t].permalink_url#">#local.tweets[local.t].date_alpha#</a></span></li></cfloop></ul></div></cfoutput></cfsavecontent>
 		<cfreturn local.tweetbackHTML/>
 	</cffunction>
 
 	<!--- data/lookup functions --->
 	<cffunction name="getTweetSearchUrl" access="private" output="false" returnType="string">
 		<cfargument name="uri" type="string" required="true"/>
-		<cfscript>
-			var local = structNew();
-			var cacheKey = getCacheKey(arguments.uri);
-			//shortened url cache never expires
-			if (urlCacheExists(cacheKey)){
-				local.shortened = getUrlCache(cacheKey);
-			}else{
-				//get shortened versions of the url
-				local.shortened = getShortUrls(arguments.uri);
-				//and cache the result
-				setUrlCache(cacheKey, local.shortened);
-			}
-
-			//compile twitter search url
-			local.thisSearch = 'http://search.twitter.com/search.json?rpp=100&q=&ors=';
-			for (local.svc in local.shortened){
-				local.thisSearch = local.thisSearch & urlEncodedFormat(local.shortened[local.svc]) & "+";
-			}
-			local.thisSearch = left(local.thisSearch,len(local.thisSearch)-1);//drop the last "+"
-
-			return local.thisSearch;
-		</cfscript>
+		<cfreturn 'http://otter.topsy.com/trackbacks.json?perpage=50&url=#arguments.uri#' />
 	</cffunction>
 	<cffunction name="makeTwitterSearchRequest" access="private" output="false" returnType="any">
 		<cfargument name="req" type="String" required="true"/>
-		<cfset var result = ""/>
-		<cfhttp url="#arguments.req#" timeout="10" method="get" result="result" useragent="SweetTweetsCFC | http://fusiongrokker.com"></cfhttp>
-		<!--- <cflog application="false" file="SweetTweets" text="Twitter Search Result: #result.fileContent#"/> --->
+		<cfset var result = StructNew() />
+		<cfset var apiResult = '' />
 		<cftry>
-			<cfif result.statuscode contains "408">
+			<cfhttp url="#arguments.req#" timeout="10" method="get" result="apiResult" useragent="SweetTweetsCFC | http://SweetTweetsCFC.riaforge.org"></cfhttp>
+			<cfif apiResult.statuscode contains "408">
 				<cfthrow message="request timed out" detail="acting as if results were empty" errorcode="408" />
 			<cfelse>
-				<cfset result = jsonService.deserializeCustom(result.fileContent.toString())/>
+				<cfset result.results = jsonService.deserializeCustom(apiResult.fileContent.toString())/>
+				<cfset result.totalCount = result.results.response.total />
+				<cfset result.results = result.results.response.list />
 			</cfif>
 			<cfcatch type="any"><!--- catch errors thrown by jsonService (likely problem w/twitter search - down,etc), return empty set --->
-				<cfset result = StructNew()/>
 				<cfset result.results = arrayNew(1)/>
 			</cfcatch>
 		</cftry>
 		<cfreturn result />
 	</cffunction>
-	<cffunction name="cleanup" access="private" output="false" returnType="array">
+	<cffunction name="markup" access="private" output="false" returnType="array">
 		<cfargument name="tweets" type="array" required="true"/>
 		<cfscript>
 			var local = structNew();
@@ -172,11 +142,9 @@ http://sweettweetscfc.riaforge.org/
 			local.hashRegex = "##([_a-z0-9]+)";
 			for (i=1;i lte arrayLen(arguments.tweets);i=i+1){
 				//fix links
-				arguments.tweets[i].text = REReplaceNoCase(arguments.tweets[i].text,local.linkRegex,"<a href='\1'>\1</a>","all");
-				arguments.tweets[i].text = REReplaceNoCase(arguments.tweets[i].text,local.atRegex,"<a href='http://twitter.com/\1'>@\1</a>","all");
-				arguments.tweets[i].text = REReplaceNoCase(arguments.tweets[i].text,local.hashRegex,"<a href='http://www.hashtags.org/tag/\1'>##\1</a>");
-				//remove ugly stuff from timestamp
-				arguments.tweets[i].created_at = Replace(arguments.tweets[i].created_at, "+0000", "");
+				arguments.tweets[i].content = REReplaceNoCase(arguments.tweets[i].content,local.linkRegex,"<a href='\1'>\1</a>","all");
+				arguments.tweets[i].content = REReplaceNoCase(arguments.tweets[i].content,local.atRegex,"<a href='http://twitter.com/\1'>@\1</a>","all");
+				arguments.tweets[i].content = REReplaceNoCase(arguments.tweets[i].content,local.hashRegex,"<a href='http://www.hashtags.org/tag/\1'>##\1</a>");
 			}
 			return arguments.tweets;
 		</cfscript>
