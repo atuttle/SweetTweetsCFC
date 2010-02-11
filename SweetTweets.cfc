@@ -17,13 +17,8 @@ specific language governing permissions and limitations under the License.
 
 VERSION INFORMATION:
 
-This file is part of SweetTweetsCFC.
-http://sweettweetscfc.riaforge.org/
---->
-<!---
-	Author: Adam Tuttle
-	Website: http://fusiongrokker.com
-	Instructions: See example.cfm (and other examples) for usage
+This file is part of SweetTweets.
+http://sweettweets.riaforge.org/
 --->
 <cfcomponent output="false">
 
@@ -32,10 +27,14 @@ http://sweettweetscfc.riaforge.org/
 
 	<cfset variables.jsonService = ""/>
 	<cfset variables.cacheLocation = "application"/>
+	<cfset variables.config.header.empty = "<h3>No Tweetbacks</h3" />
+	<cfset variables.config.header.notEmpty = "<h3>{count} Tweetbacks</h3" />
 
 	<cffunction name="init" output="false"
 	hint="Constructor - specify whether the cache should be stored locally inside this component, or in the application scope.">
 		<cfargument name="useLocalCache" type="boolean" default="true" hint="true: cache is stored inside this component, you must persist the cfc instance in application/etc scope. false: cache stored in application scope."/>
+		<cfargument name="headerEmpty" type="string" default="<h3>No Tweetbacks</h3>" />
+		<cfargument name="headerNonEmpty" type="string" default="<h3>{count} Tweetbacks</h3>" />
 		<!--- save cache location --->
 		<cfif arguments.useLocalCache>
 			<cfset variables.cacheLocation = "variables"/>
@@ -44,6 +43,11 @@ http://sweettweetscfc.riaforge.org/
 		</cfif>
 		<!--- Using JSONUtil from Nathan Mische: http://jsonutil.riaforge.org/ --->
 		<cfset variables.jsonService = createObject("component","JSONUtil").init()/>
+
+		<!--- set header templates --->
+		<cfset variables.config.header.empty = "#arguments.headerEmpty#" />
+		<cfset variables.config.header.notEmpty = "#arguments.headerNonEmpty#" />
+
 		<cfreturn this/>
 	</cffunction>
 
@@ -86,6 +90,8 @@ http://sweettweetscfc.riaforge.org/
 	hint="Returns the same data as getTweetbacks, only pre-formatted as HTML. See examples for what the HTML will look like, and you can apply your own CSS.">
 		<cfargument name="uri" type="string" required="true"/>
 		<cfargument name="limit" type="numeric" required="false" default="50" hint="Number of tweets to display, recent gets priority. Max 50."/>
+		<cfargument name="headerEmpty" type="string" default="<h3>No Tweetbacks</h3>" />
+		<cfargument name="headerNonEmpty" type="string" default="<h3>{count} Tweetbacks</h3>" />
 		<cfscript>
 			var local = structNew();
 			local.dsp = structNew();
@@ -95,11 +101,15 @@ http://sweettweetscfc.riaforge.org/
 			local.limit = min(arguments.limit, local.tweetcount);
 			if (local.limit eq 0){local.limit=local.tweetcount;}
 
+			//set header templates
+			variables.config.header.empty = "#arguments.headerEmpty#";
+			variables.config.header.notEmpty = "#arguments.headerNonEmpty#";
+
 			//define header
 			if (local.tweetcount eq 0){
-				local.dsp.header = "<h3>No Tweetbacks</h3>";
+				local.dsp.header = "#variables.config.header.empty#";
 			}else{
-				local.dsp.header = "<h3>#local.tweetCount# Tweetbacks</h3>";
+				local.dsp.header = "#replaceNoCase(variables.config.header.notEmpty, "{count}", local.tweetCount, "all")#";
 				if (local.tweetcount eq 1){local.dsp.header=replace(local.dsp.header,"Tweetbacks","Tweetback");}
 			}
 		</cfscript>
@@ -138,13 +148,13 @@ http://sweettweetscfc.riaforge.org/
 			var local = structNew();
 			var i = 0;
 			local.linkRegex = "((https?|s?ftp|ssh)\:\/\/[^""\s\<\>]*[^.,;'"">\:\s\<\>\)\]\!])";
-			local.atRegex = "@([_a-z0-9]+)";
-			local.hashRegex = "##([_a-z0-9]+)";
+			local.atRegex = "@([_a-zA-Z0-9]+)";
+			local.hashRegex = "##([_a-zA-Z0-9]+)";
 			for (i=1;i lte arrayLen(arguments.tweets);i=i+1){
 				//fix links
 				arguments.tweets[i].content = REReplaceNoCase(arguments.tweets[i].content,local.linkRegex,"<a href='\1'>\1</a>","all");
 				arguments.tweets[i].content = REReplaceNoCase(arguments.tweets[i].content,local.atRegex,"<a href='http://twitter.com/\1'>@\1</a>","all");
-				arguments.tweets[i].content = REReplaceNoCase(arguments.tweets[i].content,local.hashRegex,"<a href='http://www.hashtags.org/tag/\1'>##\1</a>");
+				arguments.tweets[i].content = REReplaceNoCase(arguments.tweets[i].content,local.hashRegex,"<a href='http://search.twitter.com/search?q=\1'>##\1</a>","all");
 			}
 			return arguments.tweets;
 		</cfscript>
