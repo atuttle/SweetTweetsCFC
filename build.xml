@@ -1,0 +1,14 @@
+<project name="SweetTweetsCFC" default="make-zip" basedir=".">
+
+	<property name="dir.dev" value="${basedir}" />
+	
+	<target name="make-zip">
+		<delete file="${dir.dev}/build.zip" />
+		<zip 
+			destfile="${dir.dev}/build.zip"
+			basedir="${dir.dev}"
+			excludes="**/.DS_Store,build.xml,.git/**,.settings/**,.project"
+		/>
+	</target>
+
+</project>
