@@ -17,8 +17,8 @@ specific language governing permissions and limitations under the License.
 
 VERSION INFORMATION:
 
-This file is part of SweetTweets.
-http://sweettweets.riaforge.org/
+This file is part of SweetTweetsCFC.
+http://sweettweetsCFC.riaforge.org/
 --->
 <cfcomponent output="false">
 
@@ -114,7 +114,7 @@ http://sweettweets.riaforge.org/
 			}
 		</cfscript>
 		<!---streamlined html to be as small as possible since it very well might be returned via ajax--->
-		<cfsavecontent variable="local.tweetbackHTML"><cfoutput><div id="tweetbacks">#local.dsp.header#<ul><cfloop from="1" to="#local.limit#" index="local.t"><li style="clear:left;"><img src="#local.tweets[local.t].author.photo_url#" align="left" vspace="2" hspace="4"/> <a href="#local.tweets[local.t].author.url#" style="background:none;"><strong>#local.tweets[local.t].author.name#</strong></a> <span class="tweetback_tweet">#local.tweets[local.t].content#</span> <span class="tweetback_timestamp"><a href="#local.tweets[local.t].permalink_url#">#local.tweets[local.t].date_alpha#</a></span></li></cfloop></ul></div></cfoutput></cfsavecontent>
+		<cfsavecontent variable="local.tweetbackHTML"><cfoutput><div id="tweetbacks">#local.dsp.header#<ul><cfloop from="1" to="#local.limit#" index="local.t"><li style="clear:left;"><img src="#local.tweets[local.t].author.photo_url#" align="left" vspace="2" hspace="4"/> <a href="#local.tweets[local.t].author.url#" style="background:none;"><strong>#local.tweets[local.t].author.name#</strong></a> <span class="tweetback_tweet">#local.tweets[local.t].content#</span> <span class="tweetback_timestamp"><cfif structKeyExists(local.tweets[local.t],"permalink_url")><a href="#local.tweets[local.t].permalink_url#">#local.tweets[local.t].date_alpha#</a><cfelse>#local.tweets[local.t].date_alpha#</cfif></span></li></cfloop></ul></div></cfoutput></cfsavecontent>
 		<cfreturn local.tweetbackHTML/>
 	</cffunction>
 
