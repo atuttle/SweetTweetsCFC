@@ -16,5 +16,5 @@ specific language governing permissions and limitations under the License.
 
 VERSION INFORMATION:
 
-This file is part of SweetTweetsCFC (1.4).
+This file is part of SweetTweetsCFC (2.0.1).
 http://sweettweetscfc.riaforge.org/
